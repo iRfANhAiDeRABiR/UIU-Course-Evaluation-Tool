@@ -100,17 +100,19 @@ function removeFloatingBadge() {
 // Modern Toast Notification Component
 // =========================================================================
 function showToastNotification(message, title = "Notification", type = "error", duration = 6500) {
+  removeFloatingBadge();
+
   let container = document.getElementById("ucam-toast-container");
   if (!container) {
     container = document.createElement("div");
     container.id = "ucam-toast-container";
     container.style.cssText = `
       position: fixed;
-      top: 24px;
+      bottom: 24px;
       right: 24px;
       z-index: 99999999;
       display: flex;
-      flex-direction: column;
+      flex-direction: column-reverse;
       gap: 12px;
       pointer-events: none;
     `;
@@ -121,7 +123,7 @@ function showToastNotification(message, title = "Notification", type = "error", 
       style.id = "ucam-toast-animations";
       style.textContent = `
         @keyframes ucamToastSlideIn {
-          from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+          from { opacity: 0; transform: translateY(20px) scale(0.96); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes ucamToastProgress {
@@ -236,7 +238,7 @@ function showToastNotification(message, title = "Notification", type = "error", 
     isDismissed = true;
     toast.style.transition = "all 0.3s ease";
     toast.style.opacity = "0";
-    toast.style.transform = "translateY(-12px) scale(0.96)";
+    toast.style.transform = "translateY(16px) scale(0.96)";
     setTimeout(() => {
       toast.remove();
       if (container && container.children.length === 0) {
