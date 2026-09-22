@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const targetGrade = gradeSelect.value;
 
     if (!userId || !password) {
-      alert("Please enter both Student ID and Password.");
+      showPopupToast("Please enter both Student ID and Password.", "error");
       return;
     }
 
@@ -144,6 +144,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         chrome.storage.local.get(["isAutomating", "currentStatus"], (st) => {
           const isErr = st.currentStatus && (st.currentStatus.includes("❌") || st.currentStatus.toLowerCase().includes("failed"));
           updateUIState(st.isAutomating, isErr);
+          if (isErr && changes.currentStatus && changes.currentStatus.newValue) {
+            const cleanMsg = changes.currentStatus.newValue.replace(/^❌\s*(Login Failed:\s*)?/, "");
+            showPopupToast(cleanMsg, "error");
+          }
         });
       }
       if (changes.logs) {
@@ -151,6 +155,58 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   });
+
+  function showPopupToast(message, type = "error") {
+    const existing = document.getElementById("popup-toast-banner");
+    if (existing) existing.remove();
+
+    const toast = document.createElement("div");
+    toast.id = "popup-toast-banner";
+    toast.style.cssText = `
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      background: ${type === "error" ? "#fee2e2" : "#e0f2fe"};
+      color: ${type === "error" ? "#991b1b" : "#0369a1"};
+      border: 1px solid ${type === "error" ? "#fca5a5" : "#7dd3fc"};
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+    `;
+
+    const icon = document.createElement("span");
+    icon.textContent = type === "error" ? "⚠️" : "⚡";
+
+    const text = document.createElement("span");
+    text.style.flex = "1";
+    text.textContent = message;
+
+    const close = document.createElement("button");
+    close.textContent = "✕";
+    close.style.cssText = "background:transparent;border:none;cursor:pointer;color:inherit;font-size:13px;padding:0 4px;line-height:1;";
+    close.addEventListener("click", () => toast.remove());
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
+    toast.appendChild(close);
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast && toast.parentNode) {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-8px)";
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 5500);
+  }
 
   function updateUIState(isAutomating, isError = false) {
     if (isError) {

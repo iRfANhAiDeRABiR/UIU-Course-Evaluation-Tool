@@ -96,6 +96,167 @@ function removeFloatingBadge() {
   if (badge) badge.remove();
 }
 
+// =========================================================================
+// Modern Toast Notification Component
+// =========================================================================
+function showToastNotification(message, title = "Notification", type = "error", duration = 6500) {
+  let container = document.getElementById("ucam-toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "ucam-toast-container";
+    container.style.cssText = `
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 99999999;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    `;
+    document.body.appendChild(container);
+
+    if (!document.getElementById("ucam-toast-animations")) {
+      const style = document.createElement("style");
+      style.id = "ucam-toast-animations";
+      style.textContent = `
+        @keyframes ucamToastSlideIn {
+          from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes ucamToastProgress {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `ucam-toast ucam-toast-${type}`;
+  toast.style.cssText = `
+    position: relative;
+    pointer-events: auto;
+    background: #ffffff;
+    color: #0f172a;
+    border-radius: 16px;
+    padding: 16px 20px;
+    min-width: 320px;
+    max-width: 440px;
+    box-shadow: 0 20px 30px -8px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+    border-left: 5px solid ${type === "error" ? "#ef4444" : "#ff6a00"};
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    animation: ucamToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  `;
+
+  const iconBubble = document.createElement("div");
+  iconBubble.style.cssText = `
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: ${type === "error" ? "#fee2e2" : "#ffedd5"};
+    color: ${type === "error" ? "#dc2626" : "#ea580c"};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  `;
+  iconBubble.textContent = type === "error" ? "⚠️" : "⚡";
+
+  const contentCol = document.createElement("div");
+  contentCol.style.cssText = "flex: 1; min-width: 0;";
+
+  const titleEl = document.createElement("div");
+  titleEl.style.cssText = `
+    font-size: 14px;
+    font-weight: 700;
+    color: ${type === "error" ? "#b91c1c" : "#c2410c"};
+    margin-bottom: 3px;
+    letter-spacing: -0.2px;
+  `;
+  titleEl.textContent = title;
+
+  const messageEl = document.createElement("div");
+  messageEl.style.cssText = "font-size: 13.5px; font-weight: 500; color: #334155; line-height: 1.45;";
+  messageEl.textContent = message;
+
+  contentCol.appendChild(titleEl);
+  contentCol.appendChild(messageEl);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.setAttribute("type", "button");
+  closeBtn.setAttribute("aria-label", "Close notification");
+  closeBtn.textContent = "✕";
+  closeBtn.style.cssText = `
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+  `;
+  closeBtn.addEventListener("mouseenter", () => {
+    closeBtn.style.color = "#0f172a";
+    closeBtn.style.background = "#f1f5f9";
+  });
+  closeBtn.addEventListener("mouseleave", () => {
+    closeBtn.style.color = "#94a3b8";
+    closeBtn.style.background = "transparent";
+  });
+
+  const progressBar = document.createElement("div");
+  progressBar.style.cssText = `
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3.5px;
+    background: ${type === "error" ? "#ef4444" : "#ff6a00"};
+    animation: ucamToastProgress ${duration}ms linear forwards;
+  `;
+
+  toast.appendChild(iconBubble);
+  toast.appendChild(contentCol);
+  toast.appendChild(closeBtn);
+  toast.appendChild(progressBar);
+
+  container.appendChild(toast);
+
+  let isDismissed = false;
+  const dismiss = () => {
+    if (isDismissed) return;
+    isDismissed = true;
+    toast.style.transition = "all 0.3s ease";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-12px) scale(0.96)";
+    setTimeout(() => {
+      toast.remove();
+      if (container && container.children.length === 0) {
+        container.remove();
+      }
+    }, 300);
+  };
+
+  closeBtn.addEventListener("click", dismiss);
+  const timer = setTimeout(dismiss, duration);
+
+  toast.addEventListener("mouseenter", () => {
+    clearTimeout(timer);
+    progressBar.style.animationPlayState = "paused";
+  });
+  toast.addEventListener("mouseleave", () => {
+    setTimeout(dismiss, 2500);
+  });
+}
+
 // Full-screen Dual-Side Confetti Cannons Celebration Engine
 function triggerDualSideCelebration(statusText = "Completed!") {
   removeFloatingBadge();
@@ -361,18 +522,28 @@ async function runAutomation() {
       // Check for specific login errors returned by UCAM
       if (
         pageText.includes("Invalid password") ||
+        pageText.includes("try again") ||
         pageText.includes("An unexpected error occurred") ||
         pageText.includes("User is blocked") ||
         pageText.includes("Account is disabled") ||
         pageText.includes("Incorrect password")
       ) {
         let errorMsg = "❌ Login Failed: Incorrect Student ID or Password.";
+        let toastTitle = "Login Failed";
+        let toastMessage = "Incorrect Student ID or Password. Please try again.";
+
         if (pageText.includes("Invalid password") || pageText.includes("try again")) {
-          errorMsg = "❌ Login Failed: Invalid password! Please re-check your password in the extension.";
+          errorMsg = "❌ Login Failed: Invalid password, try again.";
+          toastTitle = "Invalid Password";
+          toastMessage = "Invalid password, try again.";
         } else if (pageText.includes("An unexpected error occurred")) {
-          errorMsg = "❌ Login Failed: Invalid Student ID or account not recognized.";
+          errorMsg = "❌ Login Failed: An unexpected error occurred. Please contact support.";
+          toastTitle = "Unexpected Error";
+          toastMessage = "An unexpected error occurred. Please contact support.";
         } else if (pageText.includes("blocked") || pageText.includes("disabled")) {
           errorMsg = "❌ Login Failed: Account is blocked or disabled. Contact UIU admin.";
+          toastTitle = "Account Blocked";
+          toastMessage = "Account is blocked or disabled. Contact UIU admin.";
         }
 
         await appendLog(errorMsg, true);
@@ -384,7 +555,7 @@ async function runAutomation() {
           loginAttempts: 0
         });
         await chrome.storage.local.remove(["password"]);
-        alert(errorMsg);
+        showToastNotification(toastMessage, toastTitle, "error");
         return;
       }
 
@@ -401,7 +572,7 @@ async function runAutomation() {
           loginAttempts: 0
         });
         await chrome.storage.local.remove(["password"]);
-        alert(errorMsg);
+        showToastNotification("Could not authenticate after 2 attempts. Please verify your credentials.", "Authentication Failed", "error");
         return;
       }
 
