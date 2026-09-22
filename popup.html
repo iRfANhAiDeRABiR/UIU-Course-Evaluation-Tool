@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+  =============================================================
+  PROJECT: UIU UCAM Course Evaluation Automator
+  AUTHOR & ARCHITECT: IRFAN HAIDER ABIR (iabir2230474)
+  COPYRIGHT (C) 2026 IRFAN HAIDER ABIR. ALL RIGHTS RESERVED.
+  WATERMARK: SVJGQU4gSEFJREVSIEFCSVIA
+  =============================================================
+-->
+<html lang="en" data-author="IRFAN HAIDER ABIR" data-dev="iabir2230474">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="author" content="IRFAN HAIDER ABIR (iabir2230474)" />
+  <meta name="creator" content="iabir2230474" />
+  <meta name="signature" content="SVJGQU4gSEFJREVSIEFCSVIA" />
+  <title>UIU UCAM Evaluation Automator</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <!-- Hidden Security Signature: IRFAN HAIDER ABIR (iabir2230474) -->
+  <div id="_auth_seal" style="display:none;" data-author="IRFAN HAIDER ABIR" data-dev="iabir2230474" data-hash="495246414e204841494445522041424952"></div>
+
+  <div class="card">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-area">
+        <div class="badge-icon">⚡</div>
+        <div>
+          <h2>UCAM Automator</h2>
+          <p class="subtitle">UIU Course Evaluation</p>
+        </div>
+      </div>
+      <span id="status-indicator" class="status idle">Idle</span>
+    </div>
+
+    <!-- Form Section -->
+    <div class="form-container">
+      <div class="input-group">
+        <label for="user-id">Student ID / Username</label>
+        <div class="input-wrapper">
+          <span class="field-icon">🎓</span>
+          <input type="text" id="user-id" placeholder="011 ... ..." autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <span class="field-icon">🔒</span>
+          <input type="password" id="password" placeholder="Enter password" autocomplete="off" />
+          <button type="button" id="toggle-password" class="icon-btn" title="Show/Hide password">👁️</button>
+        </div>
+      </div>
+
+      <!-- Controls Row: Grade & Save Credentials Switch -->
+      <div class="controls-row">
+        <div class="grade-box">
+          <label for="grade-select">Expected Grade</label>
+          <div class="select-wrapper">
+            <select id="grade-select">
+              <option value="A" selected>A</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B">B</option>
+              <option value="B-">B-</option>
+              <option value="C+">C+</option>
+              <option value="C">C</option>
+              <option value="D+">D+</option>
+              <option value="D">D</option>
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+
+        <div class="toggle-box">
+          <label class="toggle-title">Save Login Info</label>
+          <label class="switch" title="Option to remember ID and password">
+            <input type="checkbox" id="remember-me" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="button-group">
+        <button id="start-btn" class="btn btn-primary">
+          <span class="btn-sparkle">✨</span>
+          <span>Start Automation</span>
+          <span class="btn-arrow">→</span>
+        </button>
+        <button id="stop-btn" class="btn btn-danger" style="display: none;">
+          <span class="btn-icon">⏹</span>
+          <span>Stop Automation</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Activity Log Section -->
+    <div class="log-section">
+      <div class="log-header">
+        <span class="log-title">
+          <span class="log-dot"></span> Live Activity
+        </span>
+        <button id="clear-log-btn" class="clear-btn">Clear</button>
+      </div>
+      <div id="log-box" class="log-box">
+        <div class="log-entry info">[Ready] Enter credentials and click Start Automation.</div>
+      </div>
+    </div>
+
+    <!-- Footer Credit -->
+    <div class="footer-credit">
+      ⚡ Developed by <strong>iabir2230474</strong>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
