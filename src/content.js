@@ -305,24 +305,9 @@ function showCelebrationModal(statusText) {
 
   document.body.appendChild(modal);
 
-  // Auto-dismiss celebration modal after 2.5 seconds
-  const autoCloseTimer = setTimeout(() => {
-    if (modal && modal.parentNode) {
-      modal.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-      modal.style.opacity = "0";
-      modal.style.transform = "scale(0.95)";
-      setTimeout(() => {
-        if (modal && modal.parentNode) modal.remove();
-      }, 300);
-    }
-  }, 2500);
-
   const closeBtn = document.getElementById("ucam-close-modal-btn");
   if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      clearTimeout(autoCloseTimer);
-      modal.remove();
-    });
+    closeBtn.addEventListener("click", () => modal.remove());
     closeBtn.addEventListener("mouseenter", () => {
       closeBtn.style.transform = "translateY(-2px)";
       closeBtn.style.boxShadow = "0 8px 22px rgba(255, 106, 0, 0.5)";
