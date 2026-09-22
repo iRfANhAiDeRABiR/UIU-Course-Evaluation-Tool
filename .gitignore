@@ -1,0 +1,6 @@
+# Archives & build artifacts
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
