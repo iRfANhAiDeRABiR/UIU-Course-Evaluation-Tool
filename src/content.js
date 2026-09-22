@@ -620,6 +620,9 @@ function showCelebrationModal(statusText) {
           Awesome, Close! ✨
         </button>
       </div>
+      <div style="margin-top: 16px; font-size: 11.5px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+        ⚡ Developed by <strong>iabir2230474</strong>
+      </div>
     </div>
     <style>
       @keyframes ucamFadeIn { from { opacity: 0; } to { opacity: 1; } }
