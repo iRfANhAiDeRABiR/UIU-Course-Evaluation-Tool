@@ -95,14 +95,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   passwordInput.addEventListener("change", saveCredentialsIfEnabled);
   gradeSelect.addEventListener("change", saveCredentialsIfEnabled);
 
+  // 3.5 Detect if active tab is already on an authenticated UCAM page
+  let isSessionActive = false;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs && tabs[0] && tabs[0].url) {
+      const url = tabs[0].url.toLowerCase();
+      if (url.includes("ucam.uiu.ac.bd") && !url.includes("login.aspx")) {
+        isSessionActive = true;
+        const banner = document.getElementById("session-banner");
+        if (banner) banner.style.display = "block";
+        if (!userIdInput.value) userIdInput.placeholder = "Optional (Active Session)";
+        if (!passwordInput.value) passwordInput.placeholder = "Optional (Active Session)";
+        startBtn.innerHTML = `
+          <span class="btn-sparkle">⚡</span>
+          <span>One-Click Evaluate</span>
+          <span class="btn-arrow">→</span>
+        `;
+      }
+    }
+  });
+
   // 4. Start Automation
   startBtn.addEventListener("click", () => {
     const userId = userIdInput.value.trim();
     const password = passwordInput.value.trim();
     const targetGrade = gradeSelect.value;
 
-    if (!userId || !password) {
-      showPopupToast("Please enter both Student ID and Password.", "error");
+    // Credentials are only required if user is not already logged in on UCAM
+    if (!isSessionActive && (!userId || !password)) {
+      showPopupToast("Please enter both Student ID and Password, or open UCAM in your browser.", "error");
       return;
     }
 
@@ -116,6 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           userId,
           password,
           targetGrade,
+          isSessionActive,
           author: "IRFAN HAIDER ABIR (iabir2230474)"
         }
       },

@@ -169,11 +169,90 @@ function showFloatingBadge(text, isError = false, progress = null) {
     badge.appendChild(iconSpan);
     badge.appendChild(textSpan);
   }
+
+  // Ensure quick launch button is hidden while automation is active
+  removeQuickActionButton();
 }
 
 function removeFloatingBadge() {
   const badge = document.getElementById("ucam-automator-badge");
   if (badge) badge.remove();
+}
+
+// =========================================================================
+// In-Page Quick Launch Action Button for Active Logged-in Sessions
+// =========================================================================
+function renderQuickActionButton() {
+  if (document.getElementById("ucam-quick-action-btn")) return;
+  const pathname = window.location.pathname.toLowerCase();
+  const isAuthPage = !pathname.includes("login.aspx") && pathname !== "/" && pathname !== "";
+  if (!isAuthPage) return;
+
+  chrome.storage.local.get(["isAutomating", "savedGrade"], (data) => {
+    if (data.isAutomating) return;
+    if (document.getElementById("ucam-quick-action-btn")) return;
+
+    const quickBtn = document.createElement("button");
+    quickBtn.id = "ucam-quick-action-btn";
+    quickBtn.setAttribute("type", "button");
+    quickBtn.setAttribute("title", "Click to auto-evaluate all courses without re-entering password");
+    quickBtn.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: linear-gradient(135deg, #ff6a00 0%, #ee0979 100%);
+      color: #ffffff;
+      border: none;
+      padding: 11px 18px;
+      border-radius: 25px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(255, 106, 0, 0.35);
+      z-index: 999990;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    `;
+
+    quickBtn.innerHTML = `
+      <span style="font-size: 15px;">⚡</span>
+      <span>Auto-Evaluate Courses</span>
+      <span style="font-size: 10px; background: rgba(255,255,255,0.25); padding: 2px 7px; border-radius: 10px;">One-Click</span>
+    `;
+
+    quickBtn.addEventListener("mouseenter", () => {
+      quickBtn.style.transform = "translateY(-2px) scale(1.02)";
+      quickBtn.style.boxShadow = "0 8px 24px rgba(255, 106, 0, 0.45)";
+    });
+    quickBtn.addEventListener("mouseleave", () => {
+      quickBtn.style.transform = "translateY(0) scale(1)";
+      quickBtn.style.boxShadow = "0 6px 20px rgba(255, 106, 0, 0.35)";
+    });
+
+    quickBtn.addEventListener("click", async () => {
+      quickBtn.remove();
+      await chrome.storage.local.set({
+        isAutomating: true,
+        targetGrade: data.savedGrade || "A",
+        evaluatedCourses: [],
+        currentStatus: "Starting one-click evaluation...",
+        logs: ["Starting one-click evaluation on active session..."],
+        loginAttempts: 0,
+        courseProgress: null
+      });
+      safeRunAutomation();
+    });
+
+    document.body.appendChild(quickBtn);
+  });
+}
+
+function removeQuickActionButton() {
+  const quickBtn = document.getElementById("ucam-quick-action-btn");
+  if (quickBtn) quickBtn.remove();
 }
 
 // =========================================================================
@@ -1060,29 +1139,54 @@ let isRunningAutomation = false;
 async function safeRunAutomation() {
   if (isRunningAutomation) return;
   isRunningAutomation = true;
+  removeQuickActionButton();
   try {
     await runAutomation();
   } finally {
     isRunningAutomation = false;
+    // Re-render quick launch button if automation is idle and on authenticated page
+    chrome.storage.local.get(["isAutomating"], (st) => {
+      if (!st.isAutomating) renderQuickActionButton();
+    });
   }
 }
+
+// React to direct messages from background
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg && msg.action === "TRIGGER_AUTOMATION") {
+    safeRunAutomation();
+    sendResponse({ status: "ok" });
+  }
+});
 
 // React to storage changes (e.g. Stop clicked or Start clicked)
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local") {
     if (changes.isAutomating) {
       if (changes.isAutomating.newValue === true) {
+        removeQuickActionButton();
         safeRunAutomation();
       } else if (changes.isAutomating.newValue === false) {
         removeFloatingBadge();
+        renderQuickActionButton();
       }
     }
   }
 });
 
 // Automatically trigger on page load
+function initPage() {
+  chrome.storage.local.get(["isAutomating"], (data) => {
+    if (data.isAutomating) {
+      safeRunAutomation();
+    } else {
+      renderQuickActionButton();
+    }
+  });
+}
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", safeRunAutomation);
+  document.addEventListener("DOMContentLoaded", initPage);
 } else {
-  safeRunAutomation();
+  initPage();
 }

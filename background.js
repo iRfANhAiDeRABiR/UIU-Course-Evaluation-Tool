@@ -22,13 +22,13 @@ _verifyAuthorSignature();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "START_AUTOMATION") {
-    const { userId, password, targetGrade, rememberMe } = message.payload;
+    const { userId, password, targetGrade, isSessionActive } = message.payload;
     
     // Save state to chrome.storage.local
     chrome.storage.local.set({
       isAutomating: true,
-      userId: userId,
-      password: password,
+      userId: userId || "",
+      password: password || "",
       targetGrade: targetGrade || "A",
       evaluatedCourses: [],
       currentStatus: "Starting automation...",
@@ -38,13 +38,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       _author: "IRFAN HAIDER ABIR",
       _sig: _0xauth_sig
     }, () => {
-      // Find or create a tab for UCAM
-      chrome.tabs.query({ url: "*://ucam.uiu.ac.bd/*" }, (tabs) => {
-        if (tabs && tabs.length > 0) {
-          const tab = tabs[0];
-          chrome.tabs.update(tab.id, { active: true, url: "https://ucam.uiu.ac.bd/" });
+      // If user is already on an active UCAM session, preserve the current tab and don't navigate to login
+      chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
+        const activeTab = activeTabs && activeTabs[0];
+        const isActiveUcam = activeTab && activeTab.url && activeTab.url.toLowerCase().includes("ucam.uiu.ac.bd") && !activeTab.url.toLowerCase().includes("login.aspx");
+
+        if (isSessionActive || isActiveUcam) {
+          if (activeTab) {
+            chrome.tabs.sendMessage(activeTab.id, { action: "TRIGGER_AUTOMATION" }, () => {
+              if (chrome.runtime.lastError) {
+                // Content script will also trigger via chrome.storage.onChanged
+              }
+            });
+          }
         } else {
-          chrome.tabs.create({ url: "https://ucam.uiu.ac.bd/", active: true });
+          // Find or create a tab for UCAM
+          chrome.tabs.query({ url: "*://ucam.uiu.ac.bd/*" }, (tabs) => {
+            if (tabs && tabs.length > 0) {
+              const tab = tabs[0];
+              chrome.tabs.update(tab.id, { active: true, url: "https://ucam.uiu.ac.bd/" });
+            } else {
+              chrome.tabs.create({ url: "https://ucam.uiu.ac.bd/", active: true });
+            }
+          });
         }
       });
       sendResponse({ status: "started", author: "IRFAN HAIDER ABIR" });

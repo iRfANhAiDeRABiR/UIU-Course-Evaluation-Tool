@@ -133,3 +133,4 @@ Compress-Archive -Path manifest.json, background.js, content.js, popup.html, pop
    - Regions: **All regions** (or Bangladesh).
 7. **Submit for Review**:
    Click **"Submit for review"**. Typical approval time is **24 to 72 hours**.
+
