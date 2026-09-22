@@ -34,6 +34,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       currentStatus: "Starting automation...",
       logs: ["Starting automation..."],
       loginAttempts: 0,
+      courseProgress: null,
       _author: "IRFAN HAIDER ABIR",
       _sig: _0xauth_sig
     }, () => {
@@ -55,7 +56,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({
       isAutomating: false,
       currentStatus: "Stopped by user.",
-      loginAttempts: 0
+      loginAttempts: 0,
+      courseProgress: null
     }, () => {
       chrome.storage.local.remove(["password"], () => {
         sendResponse({ status: "stopped" });

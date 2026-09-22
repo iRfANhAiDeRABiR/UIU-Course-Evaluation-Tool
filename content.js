@@ -64,7 +64,7 @@ async function appendLog(message, isError = false) {
 }
 
 // Floating UI Badge to show real-time progress & error alerts on UCAM portal
-function showFloatingBadge(text, isError = false) {
+function showFloatingBadge(text, isError = false, progress = null) {
   let badge = document.getElementById("ucam-automator-badge");
   if (!badge) {
     badge = document.createElement("div");
@@ -79,32 +79,96 @@ function showFloatingBadge(text, isError = false) {
 
   const icon = isError ? "⚠️" : "⚡";
 
-  badge.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: ${bgGradient};
-    color: white;
-    padding: 12px 20px;
-    border-radius: 25px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 13.5px;
-    font-weight: 600;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-    z-index: 999999;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-  `;
-
   badge.replaceChildren();
-  const iconSpan = document.createElement("span");
-  iconSpan.textContent = `${icon} UCAM Automator:`;
-  const textSpan = document.createElement("span");
-  textSpan.textContent = text;
-  badge.appendChild(iconSpan);
-  badge.appendChild(textSpan);
+
+  if (progress && progress.total > 0) {
+    // Rich Course Progress Pill with Mini Progress Bar
+    badge.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: ${bgGradient};
+      color: white;
+      padding: 12px 18px;
+      border-radius: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 290px;
+      max-width: 380px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(8px);
+    `;
+
+    // Row 1: Header (Course X of Y & Percent Tag)
+    const headerRow = document.createElement("div");
+    headerRow.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%;";
+
+    const titleSpan = document.createElement("span");
+    titleSpan.style.cssText = "font-size: 13.5px; font-weight: 700; letter-spacing: -0.2px;";
+    titleSpan.textContent = `⚡ Course ${progress.current} of ${progress.total}`;
+
+    const percentSpan = document.createElement("span");
+    percentSpan.style.cssText = "font-size: 11px; font-weight: 700; background: rgba(255, 255, 255, 0.25); padding: 2px 8px; border-radius: 10px;";
+    percentSpan.textContent = `${progress.percent}% Completed`;
+
+    headerRow.appendChild(titleSpan);
+    headerRow.appendChild(percentSpan);
+
+    // Row 2: Course Title
+    const courseTitle = document.createElement("div");
+    courseTitle.style.cssText = "font-size: 12px; font-weight: 600; opacity: 0.95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;";
+    courseTitle.textContent = progress.courseName || text;
+    courseTitle.title = progress.courseName || text;
+
+    // Row 3: Mini Progress Bar Track & Fill
+    const barTrack = document.createElement("div");
+    barTrack.style.cssText = "width: 100%; height: 5px; background: rgba(255, 255, 255, 0.3); border-radius: 4px; overflow: hidden; margin: 2px 0;";
+
+    const barFill = document.createElement("div");
+    barFill.style.cssText = `width: ${Math.min(100, Math.max(0, progress.percent))}%; height: 100%; background: #ffffff; border-radius: 4px; transition: width 0.4s ease;`;
+    barTrack.appendChild(barFill);
+
+    // Row 4: Sub-status action
+    const statusRow = document.createElement("div");
+    statusRow.style.cssText = "font-size: 11px; opacity: 0.88; display: flex; align-items: center; gap: 5px;";
+    statusRow.textContent = `▶ ${text}`;
+
+    badge.appendChild(headerRow);
+    badge.appendChild(courseTitle);
+    badge.appendChild(barTrack);
+    badge.appendChild(statusRow);
+  } else {
+    // Standard Pill Badge
+    badge.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: ${bgGradient};
+      color: white;
+      padding: 12px 20px;
+      border-radius: 25px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+    `;
+
+    const iconSpan = document.createElement("span");
+    iconSpan.textContent = `${icon} UCAM Automator:`;
+    const textSpan = document.createElement("span");
+    textSpan.textContent = text;
+    badge.appendChild(iconSpan);
+    badge.appendChild(textSpan);
+  }
 }
 
 function removeFloatingBadge() {
@@ -852,12 +916,13 @@ async function runAutomation() {
       const validOptions = Array.from(courseSelect.options).filter(
         (opt) => opt.value !== "0_0" && opt.value !== "0" && opt.text.trim() !== "Select"
       );
+      const totalCourses = validOptions.length;
 
       if (validOptions.length === 0) {
         const msg = "ℹ️ No registered courses available for evaluation.";
         await appendLog(msg);
         showFloatingBadge("No courses to evaluate.");
-        await chrome.storage.local.set({ isAutomating: false, currentStatus: msg });
+        await chrome.storage.local.set({ isAutomating: false, currentStatus: msg, courseProgress: null });
         await chrome.storage.local.remove(["password"]);
         return;
       }
@@ -866,18 +931,35 @@ async function runAutomation() {
       const nextCourseOpt = validOptions.find((opt) => !evaluatedCourses.includes(opt.value));
 
       if (!nextCourseOpt) {
-        const msg = `All ${validOptions.length} available courses evaluated! Final check completed.`;
+        const msg = `All ${totalCourses} available courses evaluated! Final check completed.`;
         await appendLog(msg);
-        await chrome.storage.local.set({ isAutomating: false, currentStatus: msg });
+        const finalProgress = {
+          current: totalCourses,
+          total: totalCourses,
+          courseName: "All courses evaluated!",
+          percent: 100
+        };
+        await chrome.storage.local.set({ isAutomating: false, currentStatus: msg, courseProgress: finalProgress });
         await chrome.storage.local.remove(["password"]);
         triggerDualSideCelebration(statusText || "Completed!");
         return;
       }
 
+      const currentCourseNum = evaluatedCourses.length + 1;
+      const courseName = nextCourseOpt.text.trim();
+      const progressPercent = Math.round(((currentCourseNum - 1) / totalCourses) * 100);
+      const currentProgress = {
+        current: currentCourseNum,
+        total: totalCourses,
+        courseName: courseName,
+        percent: progressPercent
+      };
+      await chrome.storage.local.set({ courseProgress: currentProgress });
+
       // If next course is not currently selected, select it
       if (courseSelect.value !== nextCourseOpt.value) {
-        await appendLog(`Selecting course: ${nextCourseOpt.text.trim()}...`);
-        showFloatingBadge(`Selecting: ${nextCourseOpt.text.trim()}`);
+        await appendLog(`Evaluating course (${currentCourseNum}/${totalCourses}): ${courseName}...`);
+        showFloatingBadge(`Selecting: ${courseName}`, false, currentProgress);
         courseSelect.value = nextCourseOpt.value;
         courseSelect.dispatchEvent(new Event("change", { bubbles: true }));
         return;
@@ -889,7 +971,7 @@ async function runAutomation() {
       if (radios.length === 0) {
         const retries = (storage.retryCount || 0) + 1;
         if (retries > 5) {
-          const errorMsg = `❌ Questions table failed to load for course: ${nextCourseOpt.text.trim()}.`;
+          const errorMsg = `❌ Questions table failed to load for course: ${courseName}.`;
           await appendLog(errorMsg, true);
           showFloatingBadge(errorMsg, true);
           await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg });
@@ -916,8 +998,8 @@ async function runAutomation() {
       }
 
       // 2. Answer all questions with 'Strongly Agree' (value 5)
-      await appendLog(`Found ${radios.length} questions. Answering 'Strongly Agree'...`);
-      showFloatingBadge(`Filling ${radios.length} questions...`);
+      await appendLog(`Evaluating course (${currentCourseNum}/${totalCourses}): ${courseName} - Answering ${radios.length} questions...`);
+      showFloatingBadge(`Filling ${radios.length} questions...`, false, currentProgress);
 
       for (let i = 0; i < radios.length; i++) {
         const radio = radios[i];
@@ -926,12 +1008,19 @@ async function runAutomation() {
         await sleep(150);
       }
 
-      await appendLog("All questions answered. Preparing to save...");
+      await appendLog(`All questions answered for (${currentCourseNum}/${totalCourses}): ${courseName}. Preparing to save...`);
       await sleep(800);
 
       // 3. Mark course as evaluated in storage BEFORE submit
       evaluatedCourses.push(nextCourseOpt.value);
-      await chrome.storage.local.set({ evaluatedCourses: evaluatedCourses });
+      const postSubmitPercent = Math.round((evaluatedCourses.length / totalCourses) * 100);
+      const updatedProgress = {
+        current: currentCourseNum,
+        total: totalCourses,
+        courseName: courseName,
+        percent: postSubmitPercent
+      };
+      await chrome.storage.local.set({ evaluatedCourses: evaluatedCourses, courseProgress: updatedProgress });
 
       // 4. Locate and click Save button
       const saveBtn =
@@ -940,8 +1029,8 @@ async function runAutomation() {
         document.querySelector("input[type='submit'][value='Save']");
 
       if (saveBtn) {
-        await appendLog(`Saving evaluation for: '${nextCourseOpt.text.trim()}'...`);
-        showFloatingBadge(`Saving: ${nextCourseOpt.text.trim()}...`);
+        await appendLog(`Saving evaluation for (${currentCourseNum}/${totalCourses}): '${courseName}'...`);
+        showFloatingBadge(`Saving: ${courseName}...`, false, updatedProgress);
         saveBtn.scrollIntoView({ behavior: "smooth", block: "center" });
         await sleep(500);
         saveBtn.click();

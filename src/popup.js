@@ -40,7 +40,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     "rememberMe",
     "isAutomating",
     "logs",
-    "currentStatus"
+    "currentStatus",
+    "courseProgress"
   ]);
 
   if (data.rememberMe !== false) {
@@ -54,6 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const isErr = data.currentStatus && (data.currentStatus.includes("❌") || data.currentStatus.toLowerCase().includes("failed") || data.currentStatus.toLowerCase().includes("error"));
   updateUIState(data.isAutomating, isErr);
+  updateCourseProgressUI(data.courseProgress, data.isAutomating);
   renderLogs(data.logs || []);
 
   // 2. Toggle password visibility
@@ -151,6 +153,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         });
       }
+      if (changes.courseProgress || changes.isAutomating) {
+        chrome.storage.local.get(["courseProgress", "isAutomating"], (st) => {
+          updateCourseProgressUI(st.courseProgress, st.isAutomating);
+        });
+      }
       if (changes.logs) {
         renderLogs(changes.logs.newValue || []);
       }
@@ -234,6 +241,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       userIdInput.disabled = false;
       passwordInput.disabled = false;
       gradeSelect.disabled = false;
+    }
+  }
+
+  function updateCourseProgressUI(progress, isAutomating) {
+    const card = document.getElementById("course-progress-card");
+    if (!card) return;
+
+    if (progress && progress.total > 0 && isAutomating) {
+      card.style.display = "block";
+      const counter = document.getElementById("progress-counter");
+      const title = document.getElementById("current-course-title");
+      const barFill = document.getElementById("progress-bar-fill");
+      const percent = document.getElementById("progress-percent");
+
+      if (counter) counter.textContent = `Course ${progress.current} of ${progress.total}`;
+      if (title) {
+        title.textContent = progress.courseName || "Evaluating Course...";
+        title.title = progress.courseName || "";
+      }
+      const pct = Math.min(100, Math.max(0, progress.percent || 0));
+      if (barFill) barFill.style.width = `${pct}%`;
+      if (percent) percent.textContent = `${pct}% Completed`;
+    } else if (progress && progress.percent === 100) {
+      card.style.display = "block";
+      const counter = document.getElementById("progress-counter");
+      const title = document.getElementById("current-course-title");
+      const barFill = document.getElementById("progress-bar-fill");
+      const percent = document.getElementById("progress-percent");
+
+      if (counter) counter.textContent = `All ${progress.total} Evaluated`;
+      if (title) title.textContent = "🎉 All courses evaluated successfully!";
+      if (barFill) barFill.style.width = "100%";
+      if (percent) percent.textContent = "100% Completed";
+    } else {
+      card.style.display = "none";
     }
   }
 
