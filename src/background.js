@@ -55,7 +55,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       isAutomating: false,
       currentStatus: "Stopped by user."
     }, () => {
-      sendResponse({ status: "stopped" });
+      chrome.storage.local.remove(["password"], () => {
+        sendResponse({ status: "stopped" });
+      });
     });
     return true;
   }

@@ -14,17 +14,18 @@ C:\Users\irfan\Desktop\Selenium\UIU Course Evaluation Tool (Chrome-Extension)
 
 ---
 
-## 🔒 Security & Watermark Details
+## 🔒 Security & Code Integrity Details
 
-- **Code Obfuscation**: The production files (`content.js`, `background.js`, `popup.js`) are compiled with AST control-flow flattening, dead-code injection, self-defending locks, and base64/RC4 string encodings.
-- **Embedded Watermarks**: The author signature **`IRFAN HAIDER ABIR`** is embedded multiple times throughout:
-  - Inside `manifest.json` (author & developer fields)
-  - Inside `popup.html` (metadata tags, hidden comments, security seals, and UI footer)
-  - Inside `background.js` (byte array integrity verification & storage tags)
-  - Inside `content.js` (DOM watermark attributes, console stamps, and runtime guards)
-  - Inside `popup.js` (signature validation checks)
-  - Inside `ucam_eval_test.py` (author assertions & byte decoders)
-- **Original Source Code**: Un-obfuscated clean source files are archived in the `src/` folder for your private development.
+- **Chrome Web Store Compliant**: All source and production files are fully human-readable, audit-hardened, and clean from forbidden obfuscation in strict accordance with Google Chrome Web Store Developer Program Policies.
+- **Credential Protection**: Runtime passwords are automatically purged from local storage immediately upon form submission, preventing unencrypted plaintext persistence on disk.
+- **DOM XSS Sanitization**: Dynamic badge and modal content use secure `textContent` DOM node construction rather than raw string interpolation.
+- **Principle of Least Privilege**: Minimized permissions down to `storage` and `activeTab`, scoped exclusively to `https://ucam.uiu.ac.bd/*`.
+- **Embedded Integrity Signatures**: The author signature **`IRFAN HAIDER ABIR`** is preserved across:
+  - `manifest.json` (author & developer fields)
+  - `popup.html` (metadata tags, security seals, and UI footer)
+  - `background.js` (byte array integrity verification & storage tags)
+  - `content.js` (DOM watermark attributes, console stamps, and runtime guards)
+  - `popup.js` (signature validation checks)
 
 ---
 

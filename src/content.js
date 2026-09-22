@@ -82,7 +82,13 @@ function showFloatingBadge(text, isError = false) {
     transition: all 0.3s ease;
   `;
 
-  badge.innerHTML = `<span>${icon} UCAM Automator:</span> <span>${text}</span>`;
+  badge.replaceChildren();
+  const iconSpan = document.createElement("span");
+  iconSpan.textContent = `${icon} UCAM Automator:`;
+  const textSpan = document.createElement("span");
+  textSpan.textContent = text;
+  badge.appendChild(iconSpan);
+  badge.appendChild(textSpan);
 }
 
 function removeFloatingBadge() {
@@ -274,7 +280,7 @@ function showCelebrationModal(statusText) {
         align-items: center;
         gap: 6px;
       ">
-        <span>Status:</span> <span>${statusText || "Completed!"}</span> <span>✅</span>
+        <span>Status:</span> <span id="ucam-celebration-status-val"></span> <span>✅</span>
       </div>
       <div>
         <button id="ucam-close-modal-btn" style="
@@ -304,6 +310,11 @@ function showCelebrationModal(statusText) {
   `;
 
   document.body.appendChild(modal);
+
+  const statusVal = modal.querySelector("#ucam-celebration-status-val");
+  if (statusVal) {
+    statusVal.textContent = statusText || "Completed!";
+  }
 
   const closeBtn = document.getElementById("ucam-close-modal-btn");
   if (closeBtn) {
@@ -372,6 +383,7 @@ async function runAutomation() {
           lastError: errorMsg,
           loginAttempts: 0
         });
+        await chrome.storage.local.remove(["password"]);
         alert(errorMsg);
         return;
       }
@@ -388,6 +400,7 @@ async function runAutomation() {
           lastError: errorMsg,
           loginAttempts: 0
         });
+        await chrome.storage.local.remove(["password"]);
         alert(errorMsg);
         return;
       }
@@ -407,6 +420,7 @@ async function runAutomation() {
         await appendLog(errorMsg, true);
         showFloatingBadge(errorMsg, true);
         await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg });
+        await chrome.storage.local.remove(["password"]);
         return;
       }
 
@@ -416,6 +430,8 @@ async function runAutomation() {
 
       userField.value = storage.userId;
       passField.value = storage.password;
+      // Immediately purge runtime password from storage to avoid plaintext persistence
+      await chrome.storage.local.remove(["password"]);
       await sleep(600);
       loginBtn.click();
       return;
@@ -516,6 +532,7 @@ async function runAutomation() {
         const msg = `🎉 Course Evaluation Status is '${statusText}'! All courses are completed!`;
         await appendLog(msg);
         await chrome.storage.local.set({ isAutomating: false, currentStatus: msg, retryCount: 0 });
+        await chrome.storage.local.remove(["password"]);
         triggerDualSideCelebration(statusText);
         return;
       }
@@ -529,6 +546,7 @@ async function runAutomation() {
           await appendLog(errorMsg, true);
           showFloatingBadge(errorMsg, true);
           await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg });
+          await chrome.storage.local.remove(["password"]);
           return;
         }
         await appendLog(`Course dropdown loading (Retry ${retries}/4)...`);
@@ -547,6 +565,7 @@ async function runAutomation() {
         await appendLog(msg);
         showFloatingBadge("No courses to evaluate.");
         await chrome.storage.local.set({ isAutomating: false, currentStatus: msg });
+        await chrome.storage.local.remove(["password"]);
         return;
       }
 
@@ -557,6 +576,7 @@ async function runAutomation() {
         const msg = `All ${validOptions.length} available courses evaluated! Final check completed.`;
         await appendLog(msg);
         await chrome.storage.local.set({ isAutomating: false, currentStatus: msg });
+        await chrome.storage.local.remove(["password"]);
         triggerDualSideCelebration(statusText || "Completed!");
         return;
       }
@@ -580,6 +600,7 @@ async function runAutomation() {
           await appendLog(errorMsg, true);
           showFloatingBadge(errorMsg, true);
           await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg });
+          await chrome.storage.local.remove(["password"]);
           return;
         }
         await appendLog(`Waiting for question table to load from server (Retry ${retries}/5)...`);
@@ -637,6 +658,7 @@ async function runAutomation() {
         await appendLog(errorMsg, true);
         showFloatingBadge(errorMsg, true);
         await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg });
+        await chrome.storage.local.remove(["password"]);
       }
     }
   } catch (err) {
@@ -645,6 +667,7 @@ async function runAutomation() {
     await appendLog(errorMsg, true);
     showFloatingBadge(errorMsg, true);
     await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg, lastError: errorMsg });
+    await chrome.storage.local.remove(["password"]);
   }
 }
 

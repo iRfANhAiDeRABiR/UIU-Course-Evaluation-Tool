@@ -17,9 +17,8 @@ The **UIU UCAM Evaluation Automator** is a client-side productivity tool designe
 
 ## 4. Permissions Justification
 - **`storage`**: Used exclusively to save user preferences and optionally save login credentials locally on the user's browser.
-- **`tabs` / `activeTab`**: Used to navigate to and detect the active UIU UCAM tab.
-- **`scripting`**: Used to perform the evaluation automation scripts on `https://ucam.uiu.ac.bd/*`.
-- **`host_permissions` (`https://ucam.uiu.ac.bd/*`)**: Strictly restricted to the UIU UCAM domain.
+- **`activeTab`**: Used to interact with the currently active UIU UCAM tab during evaluation.
+- **`host_permissions` (`https://ucam.uiu.ac.bd/*`)**: Strictly restricted to the UIU UCAM domain for performing course evaluation automation.
 
 ## 5. User Control & Deletion
 You can delete any saved data at any time by:
