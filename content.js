@@ -27,12 +27,28 @@ _authGuard();
   script.textContent = `
     /* Developed by IRFAN HAIDER ABIR (iabir2230474) */
     window.__CREATOR__ = "IRFAN HAIDER ABIR (iabir2230474)";
-    window.alert = function(msg) { console.log("[UCAM Automator by iabir2230474] Auto-accepted alert:", msg); return true; };
-    window.confirm = function(msg) { console.log("[UCAM Automator by iabir2230474] Auto-accepted confirm:", msg); return true; };
+    window.alert = function(msg) {
+      console.log("[UCAM Automator by iabir2230474] Auto-accepted alert:", msg);
+      try {
+        window.dispatchEvent(new CustomEvent("__ucam_page_alert__", { detail: String(msg || "") }));
+      } catch (e) {}
+      return true;
+    };
+    window.confirm = function(msg) {
+      console.log("[UCAM Automator by iabir2230474] Auto-accepted confirm:", msg);
+      return true;
+    };
   `;
   (document.head || document.documentElement).appendChild(script);
   script.remove();
 })();
+
+let lastPageAlertMessage = null;
+window.addEventListener("__ucam_page_alert__", (e) => {
+  if (e && e.detail) {
+    lastPageAlertMessage = String(e.detail);
+  }
+});
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -493,6 +509,85 @@ function showCelebrationModal(statusText) {
   }
 }
 
+// =========================================================================
+// Login Error Detection & Handling Helpers
+// =========================================================================
+function getLoginPageError() {
+  // 1. Check if an alert was captured
+  if (lastPageAlertMessage) {
+    const alertLower = lastPageAlertMessage.toLowerCase();
+    if (alertLower.includes("invalid password") || (alertLower.includes("try again") && alertLower.includes("password"))) {
+      return { type: "invalid_password", title: "Invalid Password", message: "Invalid password, try again." };
+    }
+    if (alertLower.includes("an unexpected error occurred") || alertLower.includes("please contact support") || alertLower.includes("unexpected error")) {
+      return { type: "unexpected_error", title: "Unexpected Error", message: "An unexpected error occurred. Please contact support." };
+    }
+    if (alertLower.includes("blocked") || alertLower.includes("disabled")) {
+      return { type: "blocked", title: "Account Blocked", message: "Account is blocked or disabled. Contact UIU admin." };
+    }
+    if (alertLower.includes("incorrect password") || alertLower.includes("invalid student id") || alertLower.includes("login failed")) {
+      return { type: "incorrect_password", title: "Login Failed", message: "Incorrect Student ID or Password. Please try again." };
+    }
+  }
+
+  // 2. Check DOM text
+  const form = document.querySelector("form");
+  let rawText = "";
+  if (form) {
+    rawText = form.innerText || form.textContent || "";
+  } else if (document.body) {
+    rawText = document.body.innerText || document.body.textContent || "";
+  }
+
+  // Strip text from our own UI elements to prevent false positives
+  const badge = document.getElementById("ucam-automator-badge");
+  if (badge && badge.innerText) rawText = rawText.replace(badge.innerText, "");
+  const toastContainer = document.getElementById("ucam-toast-container");
+  if (toastContainer && toastContainer.innerText) rawText = rawText.replace(toastContainer.innerText, "");
+  const modal = document.getElementById("ucam-celebration-modal");
+  if (modal && modal.innerText) rawText = rawText.replace(modal.innerText, "");
+
+  const lower = rawText.toLowerCase();
+
+  if (lower.includes("invalid password") || (lower.includes("try again") && lower.includes("password"))) {
+    return { type: "invalid_password", title: "Invalid Password", message: "Invalid password, try again." };
+  }
+  if (lower.includes("an unexpected error occurred") || lower.includes("please contact support") || (lower.includes("unexpected error") && lower.includes("contact support"))) {
+    return { type: "unexpected_error", title: "Unexpected Error", message: "An unexpected error occurred. Please contact support." };
+  }
+  if (lower.includes("user is blocked") || lower.includes("account is disabled") || (lower.includes("account") && lower.includes("blocked"))) {
+    return { type: "blocked", title: "Account Blocked", message: "Account is blocked or disabled. Contact UIU admin." };
+  }
+  if (lower.includes("incorrect password") || lower.includes("invalid student id")) {
+    return { type: "incorrect_password", title: "Login Failed", message: "Incorrect Student ID or Password. Please try again." };
+  }
+
+  return null;
+}
+
+async function handleLoginError(err) {
+  const errorMsg = `❌ Login Failed: ${err.message}`;
+  console.error(`[UCAM Automator] Login error detected: ${err.message}`);
+
+  // 1. Immediately remove the running floating badge
+  removeFloatingBadge();
+
+  // 2. Append error to activity logs
+  await appendLog(errorMsg, true);
+
+  // 3. Immediately halt automation and purge runtime password
+  await chrome.storage.local.set({
+    isAutomating: false,
+    currentStatus: errorMsg,
+    lastError: errorMsg,
+    loginAttempts: 0
+  });
+  await chrome.storage.local.remove(["password"]);
+
+  // 4. Trigger modern toast notification in bottom-right corner
+  showToastNotification(err.message, err.title, "error", 6500);
+}
+
 // Main Automation Controller with comprehensive error handling
 async function runAutomation() {
   try {
@@ -518,64 +613,14 @@ async function runAutomation() {
     // 1. LOGIN PAGE (LogIn.aspx or root)
     // =========================================================================
     if (pathname.includes("login.aspx") || pathname === "/" || pathname === "") {
-      const cardBody = document.querySelector(".card-body") || document.body;
-      const pageText = cardBody.textContent || "";
-
-      // Check for specific login errors returned by UCAM
-      if (
-        pageText.includes("Invalid password") ||
-        pageText.includes("try again") ||
-        pageText.includes("An unexpected error occurred") ||
-        pageText.includes("User is blocked") ||
-        pageText.includes("Account is disabled") ||
-        pageText.includes("Incorrect password")
-      ) {
-        let errorMsg = "❌ Login Failed: Incorrect Student ID or Password.";
-        let toastTitle = "Login Failed";
-        let toastMessage = "Incorrect Student ID or Password. Please try again.";
-
-        if (pageText.includes("Invalid password") || pageText.includes("try again")) {
-          errorMsg = "❌ Login Failed: Invalid password, try again.";
-          toastTitle = "Invalid Password";
-          toastMessage = "Invalid password, try again.";
-        } else if (pageText.includes("An unexpected error occurred")) {
-          errorMsg = "❌ Login Failed: An unexpected error occurred. Please contact support.";
-          toastTitle = "Unexpected Error";
-          toastMessage = "An unexpected error occurred. Please contact support.";
-        } else if (pageText.includes("blocked") || pageText.includes("disabled")) {
-          errorMsg = "❌ Login Failed: Account is blocked or disabled. Contact UIU admin.";
-          toastTitle = "Account Blocked";
-          toastMessage = "Account is blocked or disabled. Contact UIU admin.";
+      // Check if an error already exists on the page from a prior attempt
+      const attemptsSoFar = storage.loginAttempts || 0;
+      if (attemptsSoFar > 0) {
+        const priorErr = getLoginPageError();
+        if (priorErr) {
+          await handleLoginError(priorErr);
+          return;
         }
-
-        await appendLog(errorMsg, true);
-        showFloatingBadge(errorMsg, true);
-        await chrome.storage.local.set({
-          isAutomating: false,
-          currentStatus: errorMsg,
-          lastError: errorMsg,
-          loginAttempts: 0
-        });
-        await chrome.storage.local.remove(["password"]);
-        showToastNotification(toastMessage, toastTitle, "error");
-        return;
-      }
-
-      // Check login retry count to prevent infinite login loops
-      const attempts = (storage.loginAttempts || 0) + 1;
-      if (attempts > 2) {
-        const errorMsg = "❌ Login Failed: Could not authenticate after 2 attempts. Please verify your credentials.";
-        await appendLog(errorMsg, true);
-        showFloatingBadge(errorMsg, true);
-        await chrome.storage.local.set({
-          isAutomating: false,
-          currentStatus: errorMsg,
-          lastError: errorMsg,
-          loginAttempts: 0
-        });
-        await chrome.storage.local.remove(["password"]);
-        showToastNotification("Could not authenticate after 2 attempts. Please verify your credentials.", "Authentication Failed", "error");
-        return;
       }
 
       const userField = document.getElementById("logMain_UserName");
@@ -591,9 +636,26 @@ async function runAutomation() {
       if (!storage.userId || !storage.password) {
         const errorMsg = "❌ Missing credentials: Both Student ID and Password are required.";
         await appendLog(errorMsg, true);
-        showFloatingBadge(errorMsg, true);
-        await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg });
+        removeFloatingBadge();
+        await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg, lastError: errorMsg });
         await chrome.storage.local.remove(["password"]);
+        showToastNotification("Both Student ID and Password are required.", "Missing Credentials", "error");
+        return;
+      }
+
+      const attempts = attemptsSoFar + 1;
+      if (attempts > 2) {
+        const errorMsg = "❌ Login Failed: Could not authenticate after 2 attempts. Please verify your credentials.";
+        await appendLog(errorMsg, true);
+        removeFloatingBadge();
+        await chrome.storage.local.set({
+          isAutomating: false,
+          currentStatus: errorMsg,
+          lastError: errorMsg,
+          loginAttempts: 0
+        });
+        await chrome.storage.local.remove(["password"]);
+        showToastNotification("Could not authenticate after 2 attempts. Please verify your credentials.", "Authentication Failed", "error");
         return;
       }
 
@@ -601,24 +663,82 @@ async function runAutomation() {
       await appendLog(`Attempting login (Attempt ${attempts})...`);
       await chrome.storage.local.set({ loginAttempts: attempts });
 
-      userField.value = storage.userId;
-      passField.value = storage.password;
-      // Immediately purge runtime password from storage to avoid plaintext persistence
-      await chrome.storage.local.remove(["password"]);
-      await sleep(600);
-      loginBtn.click();
-      return;
-    }
+      // Reset alert tracking before submission
+      lastPageAlertMessage = null;
 
-    // Reset login attempts once successfully beyond login page
-    if (storage.loginAttempts && storage.loginAttempts > 0) {
-      await chrome.storage.local.set({ loginAttempts: 0 });
+      // Fill credentials and dispatch events for ASP.NET WebForms validators
+      userField.value = storage.userId;
+      userField.dispatchEvent(new Event("input", { bubbles: true }));
+      userField.dispatchEvent(new Event("change", { bubbles: true }));
+
+      passField.value = storage.password;
+      passField.dispatchEvent(new Event("input", { bubbles: true }));
+      passField.dispatchEvent(new Event("change", { bubbles: true }));
+
+      await sleep(500);
+      showFloatingBadge("Verifying credentials & waiting for response...");
+      await appendLog("Login submitted. Verifying response from UCAM...");
+
+      // Submit login
+      loginBtn.click();
+
+      // Poll for up to 12 seconds (48 x 250ms) to detect AJAX UpdatePanel response or navigation
+      const maxTicks = 48;
+      for (let t = 0; t < maxTicks; t++) {
+        await sleep(250);
+
+        // Check if automation was canceled externally (user pressed Stop)
+        const currentState = await chrome.storage.local.get(["isAutomating"]);
+        if (!currentState.isAutomating) {
+          removeFloatingBadge();
+          return;
+        }
+
+        // Check if page navigated away from login page
+        const currentPath = window.location.pathname.toLowerCase();
+        if (!currentPath.includes("login.aspx") && currentPath !== "/" && currentPath !== "") {
+          // Navigation occurred (e.g. redirected to StudentHome.aspx)
+          return;
+        }
+
+        // Check if error appeared in the DOM or via alert
+        const errorObj = getLoginPageError();
+        if (errorObj) {
+          await handleLoginError(errorObj);
+          return;
+        }
+      }
+
+      // Check one final time after polling duration
+      const finalErr = getLoginPageError();
+      if (finalErr) {
+        await handleLoginError(finalErr);
+        return;
+      }
+
+      // Timed out while still on login page
+      const timeoutMsg = "❌ Login Failed: Login request timed out or did not redirect. Please check your credentials and internet connection.";
+      await appendLog(timeoutMsg, true);
+      removeFloatingBadge();
+      await chrome.storage.local.set({
+        isAutomating: false,
+        currentStatus: timeoutMsg,
+        lastError: timeoutMsg,
+        loginAttempts: 0
+      });
+      await chrome.storage.local.remove(["password"]);
+      showToastNotification("Login request timed out or failed to redirect. Please check your credentials.", "Login Timeout", "error");
+      return;
     }
 
     // =========================================================================
     // 2. STUDENT HOME PAGE (StudentHome.aspx)
     // =========================================================================
     if (pathname.includes("studenthome.aspx")) {
+      // Clean up runtime credentials & login attempts upon successful login
+      await chrome.storage.local.remove(["password"]);
+      await chrome.storage.local.set({ loginAttempts: 0 });
+
       showFloatingBadge("Navigating to Registration...");
       await appendLog("Successfully logged in! Locating Registration module...");
       await sleep(1000);
@@ -838,15 +958,42 @@ async function runAutomation() {
     const errorMsg = `❌ Unexpected Error: ${err.message || err}`;
     console.error("[UCAM Automator]", err);
     await appendLog(errorMsg, true);
-    showFloatingBadge(errorMsg, true);
+    removeFloatingBadge();
     await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg, lastError: errorMsg });
     await chrome.storage.local.remove(["password"]);
+    showToastNotification(err.message || "An unexpected error occurred. Please contact support.", "Unexpected Error", "error");
   }
 }
 
+// Concurrency guard to prevent multiple automation runners from overlapping
+let isRunningAutomation = false;
+
+async function safeRunAutomation() {
+  if (isRunningAutomation) return;
+  isRunningAutomation = true;
+  try {
+    await runAutomation();
+  } finally {
+    isRunningAutomation = false;
+  }
+}
+
+// React to storage changes (e.g. Stop clicked or Start clicked)
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local") {
+    if (changes.isAutomating) {
+      if (changes.isAutomating.newValue === true) {
+        safeRunAutomation();
+      } else if (changes.isAutomating.newValue === false) {
+        removeFloatingBadge();
+      }
+    }
+  }
+});
+
 // Automatically trigger on page load
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", runAutomation);
+  document.addEventListener("DOMContentLoaded", safeRunAutomation);
 } else {
-  runAutomation();
+  safeRunAutomation();
 }

@@ -52,7 +52,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     rememberMeCheckbox.checked = false;
   }
 
-  updateUIState(data.isAutomating);
+  const isErr = data.currentStatus && (data.currentStatus.includes("❌") || data.currentStatus.toLowerCase().includes("failed") || data.currentStatus.toLowerCase().includes("error"));
+  updateUIState(data.isAutomating, isErr);
   renderLogs(data.logs || []);
 
   // 2. Toggle password visibility
