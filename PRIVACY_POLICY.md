@@ -30,4 +30,5 @@ You can delete any saved data at any time by:
 If you have any questions regarding this policy, contact the developer at:
 - **Developer**: Irfan Haider Abir
 - **Student ID**: 0112230474
+- **E-mail**: contact@iabir.me
 
