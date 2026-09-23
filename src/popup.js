@@ -7,19 +7,6 @@
  * ============================================================================
  */
 
-const _0x_author_sig = "SVJGQU4gSEFJREVSIEFCSVIA";
-const _0x_author_bytes = [73, 82, 70, 65, 78, 32, 72, 65, 73, 68, 69, 82, 32, 65, 66, 73, 82];
-
-function _verifyAuthSeal() {
-  const author = _0x_author_bytes.map(b => String.fromCharCode(b)).join("");
-  if (author !== "IRFAN HAIDER ABIR") {
-    document.body.innerHTML = "<h1>Tampering Detected.</h1>";
-    throw new Error("Tampered executable.");
-  }
-  return author;
-}
-_verifyAuthSeal();
-
 document.addEventListener("DOMContentLoaded", async () => {
   const userIdInput = document.getElementById("user-id");
   const passwordInput = document.getElementById("password");
@@ -80,8 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           savedUserId: uid,
           savedPassword: pwd,
           savedGrade: grd,
-          rememberMe: true,
-          _author: "IRFAN HAIDER ABIR (iabir2230474)"
+          rememberMe: true
         });
       }
     } else {
@@ -137,12 +123,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           userId,
           password,
           targetGrade,
-          isSessionActive,
-          author: "IRFAN HAIDER ABIR (iabir2230474)"
+          isSessionActive
         }
       },
       (response) => {
-        console.log("[Auth: iabir2230474] Start response:", response);
+        console.log("Automation started:", response);
       }
     );
   });

@@ -1,29 +1,13 @@
 /**
- * ============================================================================
- *  UIU UCAM COURSE EVALUATION AUTOMATOR - BACKGROUND SERVICE WORKER
- *  AUTHOR & ARCHITECT : IRFAN HAIDER ABIR
- *  STUDENT ID         : 0112230474
- *  COPYRIGHT (C) 2026 IRFAN HAIDER ABIR. ALL RIGHTS RESERVED.
- * ============================================================================
+ * UIU UCAM Course Evaluation Automator - Background Service Worker
+ * Author: Irfan Haider Abir (Student ID: 0112230474)
+ * Copyright (C) 2026 Irfan Haider Abir. All rights reserved.
  */
-
-// Hidden Watermark Integrity Verification
-const _0xauth_sig = "SVJGQU4gSEFJREVSIEFCSVIA";
-const _0xauth_bytes = [73, 82, 70, 65, 78, 32, 72, 65, 73, 68, 69, 82, 32, 65, 66, 73, 82];
-
-function _verifyAuthorSignature() {
-  const _decoded = _0xauth_bytes.map(b => String.fromCharCode(b)).join("");
-  if (_decoded !== "IRFAN HAIDER ABIR") {
-    throw new Error("Integrity check failed: Author watermark tampered.");
-  }
-  return _decoded;
-}
-_verifyAuthorSignature();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "START_AUTOMATION") {
-    const { userId, password, targetGrade, isSessionActive } = message.payload;
-    
+    const { userId, password, targetGrade, isSessionActive } = message.payload || {};
+
     // Save state to chrome.storage.local
     chrome.storage.local.set({
       isAutomating: true,
@@ -34,9 +18,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       currentStatus: "Starting automation...",
       logs: ["Starting automation..."],
       loginAttempts: 0,
-      courseProgress: null,
-      _author: "IRFAN HAIDER ABIR",
-      _sig: _0xauth_sig
+      courseProgress: null
     }, () => {
       // If user is already on an active UCAM session, preserve the current tab and don't navigate to login
       chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
@@ -63,7 +45,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
         }
       });
-      sendResponse({ status: "started", author: "IRFAN HAIDER ABIR" });
+      sendResponse({ status: "started" });
     });
     return true; // Keep message channel open for async response
   }

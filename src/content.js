@@ -7,20 +7,6 @@
  * ============================================================================
  */
 
-// Hidden Watermark Layers
-const _0xwatermark_b64 = "SVJGQU4gSEFJREVSIEFCSVIA";
-const _0xauthor_tokens = [0x49, 0x52, 0x46, 0x41, 0x4e, 0x20, 0x48, 0x41, 0x49, 0x44, 0x45, 0x52, 0x20, 0x41, 0x42, 0x49, 0x52];
-
-function _authGuard() {
-  const _id = _0xauthor_tokens.map(c => String.fromCharCode(c)).join("");
-  if (_id !== "IRFAN HAIDER ABIR") {
-    console.error("Critical: Signature validation failure.");
-    return false;
-  }
-  return true;
-}
-_authGuard();
-
 // Override window.alert and window.confirm in page context to prevent modal blocking
 (function injectModalOverrides() {
   const script = document.createElement("script");
@@ -69,7 +55,6 @@ function showFloatingBadge(text, isError = false, progress = null) {
   if (!badge) {
     badge = document.createElement("div");
     badge.id = "ucam-automator-badge";
-    badge.setAttribute("data-creator", "IRFAN HAIDER ABIR (iabir2230474)");
     document.body.appendChild(badge);
   }
 
