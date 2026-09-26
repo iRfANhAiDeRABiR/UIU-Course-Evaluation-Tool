@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!--
+  UIU UCAM Course Evaluation Automator
+  Author: Irfan Haider Abir (iabir2230474)
+  Copyright (C) 2026 Irfan Haider Abir. All rights reserved.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="author" content="Irfan Haider Abir (iabir2230474)" />
+  <title>UIU UCAM Evaluation Automator</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="card">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-area">
+        <div class="badge-icon">⚡</div>
+        <div>
+          <h2>UCAM Automator</h2>
+          <p class="subtitle">UIU Course Evaluation</p>
+        </div>
+      </div>
+      <span id="status-indicator" class="status idle">Idle</span>
+    </div>
+
+    <!-- Active Session Banner (Shown when already logged into UCAM on active tab) -->
+    <div id="session-banner" class="session-banner" style="display: none;">
+      <div class="session-badge">
+        <span class="session-pulse"></span>
+        <span>Active UCAM Session Detected</span>
+      </div>
+      <div class="session-text">Already logged in! No password required to evaluate.</div>
+    </div>
+
+    <!-- Form Section -->
+    <div class="form-container">
+      <div class="input-group">
+        <label for="user-id">Student ID / Username</label>
+        <div class="input-wrapper">
+          <span class="field-icon">🎓</span>
+          <input type="text" id="user-id" placeholder="011 ... ..." autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <span class="field-icon">🔒</span>
+          <input type="password" id="password" placeholder="Enter password" autocomplete="off" />
+          <button type="button" id="toggle-password" class="icon-btn" title="Show/Hide password">👁️</button>
+        </div>
+      </div>
+
+      <!-- Controls Row: Grade & Save Credentials Switch -->
+      <div class="controls-row">
+        <div class="grade-box">
+          <label for="grade-select">Expected Grade</label>
+          <div class="select-wrapper">
+            <select id="grade-select">
+              <option value="A" selected>A</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B">B</option>
+              <option value="B-">B-</option>
+              <option value="C+">C+</option>
+              <option value="C">C</option>
+              <option value="D+">D+</option>
+              <option value="D">D</option>
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+
+        <div class="toggle-box">
+          <label class="toggle-title">Save Login Info</label>
+          <label class="switch" title="Option to remember ID and password">
+            <input type="checkbox" id="remember-me" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="button-group">
+        <button id="start-btn" class="btn btn-primary">
+          <span class="btn-sparkle">✨</span>
+          <span>Start Automation</span>
+          <span class="btn-arrow">→</span>
+        </button>
+        <button id="stop-btn" class="btn btn-danger" style="display: none;">
+          <span class="btn-icon">⏹</span>
+          <span>Stop Automation</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Course Progress Card (Displays real-time course counter & progress bar) -->
+    <div id="course-progress-card" class="course-progress-card" style="display: none;">
+      <div class="progress-header">
+        <span class="progress-label">Course Progress</span>
+        <span id="progress-counter" class="progress-counter">Course 0 of 0</span>
+      </div>
+      <div id="current-course-title" class="current-course-title" title="">Loading course...</div>
+      <div class="progress-bar-track">
+        <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+      </div>
+      <div class="progress-footer">
+        <span id="progress-percent" class="progress-percent">0% Completed</span>
+        <span class="progress-badge">In Progress</span>
+      </div>
+    </div>
+
+    <!-- Activity Log Section -->
+    <div class="log-section">
+      <div class="log-header">
+        <span class="log-title">
+          <span class="log-dot"></span> Live Activity
+        </span>
+        <button id="clear-log-btn" class="clear-btn">Clear</button>
+      </div>
+      <div id="log-box" class="log-box">
+        <div class="log-entry info">[Ready] Enter credentials and click Start Automation.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

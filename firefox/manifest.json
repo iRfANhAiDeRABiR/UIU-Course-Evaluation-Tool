@@ -27,8 +27,16 @@
   "host_permissions": [
     "https://ucam.uiu.ac.bd/*"
   ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "uiu-ucam-evaluator@irfanhaiderabir",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"]
   },
   "content_scripts": [
     {
