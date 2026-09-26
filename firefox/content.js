@@ -899,6 +899,16 @@ async function runAutomation() {
     // 3. REGISTRATION HOME PAGE (RegistrationHome.aspx)
     // =========================================================================
     if (pathname.includes("registrationhome.aspx")) {
+      const pageText = document.body.innerText || "";
+      if (/course\s+evaluation\s+is\s+off/i.test(pageText) || /evaluation\s+is\s+off\s+now/i.test(pageText)) {
+        const offMsg = "⚠️ Course evaluation is off now (University evaluation period is inactive).";
+        await appendLog(offMsg, true);
+        showToastNotification("Course evaluation is off now. The evaluation period is currently inactive.", "Evaluation Off", "warning", 8000);
+        await chrome.storage.local.set({ isAutomating: false, currentStatus: offMsg, retryCount: 0, courseProgress: null });
+        await chrome.storage.local.remove(["password"]);
+        return;
+      }
+
       showFloatingBadge("Opening Course Evaluation menu...");
       await appendLog("On Registration module. Locating Course Evaluation menu...");
       await sleep(1000);
@@ -923,10 +933,11 @@ async function runAutomation() {
 
       const retries = (storage.retryCount || 0) + 1;
       if (retries > 4) {
-        const errorMsg = "❌ Course Evaluation menu not found. The evaluation period may be closed for your trimester.";
+        const errorMsg = "⚠️ Course Evaluation menu not found. The evaluation period may be off or closed for your trimester.";
         await appendLog(errorMsg, true);
-        showFloatingBadge(errorMsg, true);
-        await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg });
+        showToastNotification("Course Evaluation menu not found. The evaluation period may be off or closed.", "Evaluation Unavailable", "warning", 8000);
+        await chrome.storage.local.set({ isAutomating: false, currentStatus: errorMsg, retryCount: 0 });
+        await chrome.storage.local.remove(["password"]);
         return;
       }
       await appendLog(`Waiting for Course Evaluation menu (Retry ${retries}/4)...`);
@@ -955,6 +966,34 @@ async function runAutomation() {
         await chrome.storage.local.set({ isAutomating: false, currentStatus: msg, retryCount: 0 });
         await chrome.storage.local.remove(["password"]);
         triggerDualSideCelebration(statusText);
+        return;
+      }
+
+      // Check if Course Evaluation is turned off or closed by University Authority
+      const containerText = (document.getElementById("ctl00_MainContainer") || document.body).innerText || "";
+      const isEvaluationOff =
+        /course\s+evaluation\s+is\s+off/i.test(containerText) ||
+        /evaluation\s+is\s+off\s+now/i.test(containerText) ||
+        /evaluation\s+is\s+closed/i.test(containerText) ||
+        /course\s+evaluation\s+is\s+not\s+(available|open|active)/i.test(containerText) ||
+        /evaluation\s+period\s+is\s+(over|closed|ended)/i.test(containerText);
+
+      if (isEvaluationOff) {
+        const offMsg = "⚠️ Course evaluation is off now. The university evaluation period is currently inactive.";
+        await appendLog(offMsg, true);
+        showToastNotification(
+          "Course evaluation is off now. The university has not opened or has closed the evaluation period.",
+          "Evaluation Off",
+          "warning",
+          8000
+        );
+        await chrome.storage.local.set({
+          isAutomating: false,
+          currentStatus: offMsg,
+          retryCount: 0,
+          courseProgress: null
+        });
+        await chrome.storage.local.remove(["password"]);
         return;
       }
 

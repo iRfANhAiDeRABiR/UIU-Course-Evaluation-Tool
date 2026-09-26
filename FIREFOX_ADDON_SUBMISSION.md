@@ -9,14 +9,14 @@ This document contains everything needed to submit the **UIU UCAM Course Evaluat
 The previous two validation errors have been completely resolved:
 
 1. **`Unsupported "/background/service_worker" manifest property used without "/background/scripts"`**:
-   - **Resolved**: In Manifest V3, Firefox executes background tasks using event pages defined via `"background": { "scripts": ["background.js"] }`. This property has been configured properly.
+   - **Resolved**: In Manifest V3, Firefox executes background tasks using event pages defined via `"background": { "scripts": ["background.js"] }`. This property has been configured properly in `firefox/manifest.json`.
 2. **`The add-on ID is required in Manifest Version 3 and above`**:
    - **Resolved**: Added a permanent, unique Firefox Add-on ID under `browser_specific_settings.gecko.id`:
      `"id": "uiu-ucam-evaluator@irfanhaiderabir"`
 3. **Mandatory Mozilla Data Consent**:
    - Added `"data_collection_permissions": { "required": ["none"] }` to comply with Mozilla's mandatory data transparency requirement.
 
-> **Validation Status**: Passed `addons-linter` with **0 Errors, 0 Warnings, 0 Notices**.
+> **Validation Status**: Passed official `addons-linter` with **0 Errors, 0 Warnings, 0 Notices**.
 
 ---
 
@@ -24,7 +24,7 @@ The previous two validation errors have been completely resolved:
 
 Use the dedicated Firefox package located in your project folder:
 ```text
-UIU-UCAM-Evaluation-Automator-Firefox-v1.0.1.zip
+UIU-UCAM-Evaluation-Automator-Firefox-v1.0.2.zip
 ```
 
 ---
@@ -50,9 +50,10 @@ UIU UCAM Course Evaluation Automator is a modern, lightweight, and secure browse
 • Customizable Target Grade: Choose your desired expected grade (A, A-, B+, etc.) across all evaluation forms.
 • Consistent Rating System: Answers all evaluation questions with positive ratings automatically.
 • Real-Time Course Progress Tracker: Live progress bar and counter (Course X of Y) in both the extension popup and on-page floating badge.
+• Smart Inactive Evaluation Detection: Instantly detects when university evaluation is turned off ("Course evaluation is off now"), halting immediately without wasteful retries.
 • Smart ASP.NET AJAX Error Detection: Instantly detects invalid passwords, account status issues, or server errors, halting automation safely.
 • Interactive Bottom-Right Toast Alerts: Informs you of errors or completion without disruptive browser alerts.
-• Dual Confetti Celebration Engine: Features celebration cannons and a completion summary dialog upon finishing all course evaluations.
+• Completion Celebration Engine: Features celebration confetti and a completion summary dialog upon finishing all course evaluations.
 • Live Activity Logs: Transparent real-time log box displaying every automated action step-by-step.
 
 🔒 PRIVACY & SECURITY FIRST:
@@ -74,7 +75,7 @@ This is an independent open-source tool built by Irfan Haider Abir (Student ID: 
 ```
 
 ### Categories
-- **Primary**: `Appearance` or `General` $\rightarrow$ `Productivity`
+- **Primary**: `Productivity`
 - **Tags / Keywords**: `uiu`, `ucam`, `evaluation`, `bangladesh`, `automation`
 
 ### Privacy Policy URL
@@ -97,7 +98,7 @@ https://github.com/iRfANhAiDeRABiR/UIU-Course-Evaluation-Tool
 2. **Distribution Option**:
    - Select **"On this site (recommended)"** so students can install it directly from the Firefox Add-ons marketplace.
 3. **Upload Version**:
-   - Upload `UIU-UCAM-Evaluation-Automator-Firefox-v1.0.1.zip`.
+   - Upload `UIU-UCAM-Evaluation-Automator-Firefox-v1.0.2.zip`.
    - The Mozilla automated validator will run and show **"Validation passed with 0 errors"**.
 4. **Source Code Inquiry**:
    - Mozilla asks: *"Do your source files need to be compiled, minified, or built?"*

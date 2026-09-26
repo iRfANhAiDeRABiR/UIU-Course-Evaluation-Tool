@@ -115,12 +115,13 @@ https://irfanhaiderabir.github.io/UIU-Course-Evaluation-Tool/privacy-policy.html
 
 ## 4. Packaging the Extension (.ZIP)
 
-Package only runtime files into `UIU-UCAM-Evaluation-Automator-v1.0.1.zip`:
+Package only runtime files into `UIU-UCAM-Evaluation-Automator-Chrome-v1.0.2.zip`:
 
 ### PowerShell Command:
 ```powershell
-Compress-Archive -Path manifest.json, background.js, content.js, popup.html, popup.css, popup.js, icon16.png, icon48.png, icon128.png -DestinationPath "UIU-UCAM-Evaluation-Automator-v1.0.1.zip" -Force
+Compress-Archive -Path "chrome\*" -DestinationPath "UIU-UCAM-Evaluation-Automator-Chrome-v1.0.2.zip" -Force
 ```
+*(Or simply run `.\build.ps1` to build both Chrome and Firefox packages automatically!)*
 
 ---
 
@@ -132,7 +133,7 @@ Compress-Archive -Path manifest.json, background.js, content.js, popup.html, pop
    Click on **UIU UCAM Evaluation Automator**.
 3. **Upload Updated Package**:
    - Go to **Package** tab.
-   - Click **"Upload new package"** and select `UIU-UCAM-Evaluation-Automator-v1.0.1.zip`.
+   - Click **"Upload new package"** and select `UIU-UCAM-Evaluation-Automator-Chrome-v1.0.2.zip`.
 4. **Update Store Listing Graphics**:
    - In the **Store Listing** tab, ensure any rejected promotional images are replaced with `promo_banner.jpg`.
 5. **Update Privacy Tab**:
