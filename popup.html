@@ -82,6 +82,35 @@
         </div>
       </div>
 
+      <!-- Course Selection Checklist Card -->
+      <div id="course-checklist-section" class="course-checklist-section">
+        <div class="checklist-header" id="checklist-toggle-btn" role="button" tabindex="0" title="Click to collapse/expand">
+          <div class="checklist-header-left">
+            <span class="checklist-icon">🎯</span>
+            <span class="checklist-heading">Courses to Evaluate</span>
+            <span id="checklist-counter-badge" class="checklist-counter-badge">All</span>
+          </div>
+          <span id="checklist-chevron" class="checklist-chevron">▾</span>
+        </div>
+
+        <div id="checklist-collapse" class="checklist-collapse">
+          <div class="checklist-subbar">
+            <span class="checklist-hint">Uncheck courses to skip for manual review</span>
+            <div class="checklist-quick-actions">
+              <button type="button" id="btn-select-all-courses" class="quick-link-btn" title="Select all courses">All</button>
+              <span class="divider">|</span>
+              <button type="button" id="btn-deselect-all-courses" class="quick-link-btn" title="Deselect all courses">Clear</button>
+            </div>
+          </div>
+          <div id="course-list-items" class="course-list-items">
+            <div class="course-empty-hint">
+              <span>💡</span>
+              <p>Enrolled courses will appear here once detected on UCAM, or you can skip courses on-the-fly using the live on-page badge.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div class="button-group">
         <button id="start-btn" class="btn btn-primary">

@@ -28,8 +28,117 @@ document.addEventListener("DOMContentLoaded", async () => {
     "isAutomating",
     "logs",
     "currentStatus",
-    "courseProgress"
+    "courseProgress",
+    "detectedCourses",
+    "skippedCourses"
   ]);
+
+  let detectedCourses = data.detectedCourses || [];
+  let skippedCourses = data.skippedCourses || [];
+
+  const checklistToggleBtn = document.getElementById("checklist-toggle-btn");
+  const checklistCollapse = document.getElementById("checklist-collapse");
+  const checklistChevron = document.getElementById("checklist-chevron");
+  const checklistCounterBadge = document.getElementById("checklist-counter-badge");
+  const btnSelectAllCourses = document.getElementById("btn-select-all-courses");
+  const btnDeselectAllCourses = document.getElementById("btn-deselect-all-courses");
+  const courseListItems = document.getElementById("course-list-items");
+
+  function renderCourseChecklist(courses, skipped) {
+    if (!courseListItems) return;
+    courseListItems.innerHTML = "";
+
+    if (!courses || courses.length === 0) {
+      if (checklistCounterBadge) {
+        checklistCounterBadge.textContent = "Auto";
+        checklistCounterBadge.title = "Courses will be detected on UCAM";
+      }
+      courseListItems.innerHTML = `
+        <div class="course-empty-hint">
+          <span>💡</span>
+          <p>Enrolled courses will appear here once detected on UCAM, or you can skip courses on-the-fly using the live on-page badge.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const activeCount = courses.filter((c) => !skipped.includes(c.id)).length;
+    if (checklistCounterBadge) {
+      checklistCounterBadge.textContent = `${activeCount}/${courses.length}`;
+      checklistCounterBadge.title = `${activeCount} out of ${courses.length} courses selected for automation`;
+    }
+
+    courses.forEach((c) => {
+      const isSkipped = skipped.includes(c.id);
+      const label = document.createElement("label");
+      label.className = isSkipped ? "course-item is-skipped" : "course-item";
+      label.title = isSkipped ? "Skipped (Will be left for manual review)" : "Included in automation";
+
+      const leftDiv = document.createElement("div");
+      leftDiv.className = "course-item-left";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = !isSkipped;
+      checkbox.dataset.courseId = c.id;
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "course-item-name";
+      nameSpan.textContent = c.name;
+
+      leftDiv.appendChild(checkbox);
+      leftDiv.appendChild(nameSpan);
+
+      const badgeSpan = document.createElement("span");
+      badgeSpan.className = `course-badge-pill ${isSkipped ? "skip" : "auto"}`;
+      badgeSpan.textContent = isSkipped ? "Skip" : "Automate";
+
+      label.appendChild(leftDiv);
+      label.appendChild(badgeSpan);
+
+      checkbox.addEventListener("change", async () => {
+        let curSkipped = (await chrome.storage.local.get("skippedCourses")).skippedCourses || [];
+        if (checkbox.checked) {
+          curSkipped = curSkipped.filter((id) => id !== c.id);
+        } else {
+          if (!curSkipped.includes(c.id)) curSkipped.push(c.id);
+        }
+        skippedCourses = curSkipped;
+        await chrome.storage.local.set({ skippedCourses: curSkipped });
+        renderCourseChecklist(detectedCourses, skippedCourses);
+      });
+
+      courseListItems.appendChild(label);
+    });
+  }
+
+  renderCourseChecklist(detectedCourses, skippedCourses);
+
+  // Toggle Collapse
+  if (checklistToggleBtn) {
+    checklistToggleBtn.addEventListener("click", () => {
+      if (checklistCollapse) checklistCollapse.classList.toggle("is-collapsed");
+      if (checklistChevron) checklistChevron.classList.toggle("collapsed");
+    });
+  }
+
+  // Quick action: Select All
+  if (btnSelectAllCourses) {
+    btnSelectAllCourses.addEventListener("click", async () => {
+      skippedCourses = [];
+      await chrome.storage.local.set({ skippedCourses: [] });
+      renderCourseChecklist(detectedCourses, skippedCourses);
+    });
+  }
+
+  // Quick action: Clear All (Skip All)
+  if (btnDeselectAllCourses) {
+    btnDeselectAllCourses.addEventListener("click", async () => {
+      skippedCourses = detectedCourses.map((c) => c.id);
+      await chrome.storage.local.set({ skippedCourses });
+      renderCourseChecklist(detectedCourses, skippedCourses);
+    });
+  }
 
   if (data.rememberMe !== false) {
     if (data.savedUserId) userIdInput.value = data.savedUserId;
@@ -97,6 +206,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           <span>One-Click Evaluate</span>
           <span class="btn-arrow">→</span>
         `;
+
+        // If on UCAM tab, try to fetch live course list if on Evaluation Form
+        chrome.tabs.sendMessage(tabs[0].id, { action: "GET_COURSES" }, (res) => {
+          if (!chrome.runtime.lastError && res && res.courses && res.courses.length > 0) {
+            detectedCourses = res.courses;
+            renderCourseChecklist(detectedCourses, skippedCourses);
+          }
+        });
       }
     }
   });
@@ -167,6 +284,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (changes.logs) {
         renderLogs(changes.logs.newValue || []);
+      }
+      if (changes.detectedCourses || changes.skippedCourses) {
+        chrome.storage.local.get(["detectedCourses", "skippedCourses"], (st) => {
+          detectedCourses = st.detectedCourses || [];
+          skippedCourses = st.skippedCourses || [];
+          renderCourseChecklist(detectedCourses, skippedCourses);
+        });
       }
     }
   });

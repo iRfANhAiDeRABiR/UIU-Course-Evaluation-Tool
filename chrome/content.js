@@ -50,7 +50,7 @@ async function appendLog(message, isError = false) {
 }
 
 // Floating UI Badge to show real-time progress & error alerts on UCAM portal
-function showFloatingBadge(text, isError = false, progress = null) {
+function showFloatingBadge(text, isError = false, progress = null, courseToSkip = null) {
   let badge = document.getElementById("ucam-automator-badge");
   if (!badge) {
     badge = document.createElement("div");
@@ -82,26 +82,66 @@ function showFloatingBadge(text, isError = false, progress = null) {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      min-width: 290px;
-      max-width: 380px;
+      min-width: 300px;
+      max-width: 390px;
       transition: all 0.3s ease;
       backdrop-filter: blur(8px);
     `;
 
-    // Row 1: Header (Course X of Y & Percent Tag)
+    // Row 1: Header (Course X of Y & Percent Tag & Skip Button)
     const headerRow = document.createElement("div");
     headerRow.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%;";
 
     const titleSpan = document.createElement("span");
-    titleSpan.style.cssText = "font-size: 13.5px; font-weight: 700; letter-spacing: -0.2px;";
+    titleSpan.style.cssText = "font-size: 13px; font-weight: 700; letter-spacing: -0.2px;";
     titleSpan.textContent = `⚡ Course ${progress.current} of ${progress.total}`;
 
+    const rightActions = document.createElement("div");
+    rightActions.style.cssText = "display: flex; align-items: center; gap: 6px;";
+
     const percentSpan = document.createElement("span");
-    percentSpan.style.cssText = "font-size: 11px; font-weight: 700; background: rgba(255, 255, 255, 0.25); padding: 2px 8px; border-radius: 10px;";
-    percentSpan.textContent = `${progress.percent}% Completed`;
+    percentSpan.style.cssText = "font-size: 11px; font-weight: 700; background: rgba(255, 255, 255, 0.25); padding: 2px 7px; border-radius: 10px;";
+    percentSpan.textContent = `${progress.percent}%`;
+    rightActions.appendChild(percentSpan);
+
+    if (courseToSkip && courseToSkip.id) {
+      const skipBtn = document.createElement("button");
+      skipBtn.textContent = "⏩ Skip";
+      skipBtn.title = `Skip ${courseToSkip.name} for manual review`;
+      skipBtn.style.cssText = `
+        background: rgba(255, 255, 255, 0.28);
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      `;
+      skipBtn.addEventListener("mouseenter", () => {
+        skipBtn.style.background = "rgba(255, 255, 255, 0.45)";
+      });
+      skipBtn.addEventListener("mouseleave", () => {
+        skipBtn.style.background = "rgba(255, 255, 255, 0.28)";
+      });
+      skipBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        skipBtn.disabled = true;
+        skipBtn.textContent = "Skipping...";
+        const st = await chrome.storage.local.get("skippedCourses");
+        const sk = st.skippedCourses || [];
+        if (!sk.includes(courseToSkip.id)) sk.push(courseToSkip.id);
+        await chrome.storage.local.set({ skippedCourses: sk });
+        await appendLog(`⏩ Skipped course: '${courseToSkip.name}' (Marked for manual review).`);
+        showFloatingBadge(`Skipped ${courseToSkip.name}...`, false);
+        setTimeout(safeRunAutomation, 600);
+      });
+      rightActions.appendChild(skipBtn);
+    }
 
     headerRow.appendChild(titleSpan);
-    headerRow.appendChild(percentSpan);
+    headerRow.appendChild(rightActions);
 
     // Row 2: Course Title
     const courseTitle = document.createElement("div");
@@ -1016,10 +1056,14 @@ async function runAutomation() {
       }
 
       const evaluatedCourses = storage.evaluatedCourses || [];
+      const skippedCourses = storage.skippedCourses || [];
       const validOptions = Array.from(courseSelect.options).filter(
         (opt) => opt.value !== "0_0" && opt.value !== "0" && opt.text.trim() !== "Select"
       );
-      const totalCourses = validOptions.length;
+
+      // Pre-cache all detected courses so popup checklist has exact list
+      const detectedCourses = validOptions.map((opt) => ({ id: opt.value, name: opt.text.trim() }));
+      await chrome.storage.local.set({ detectedCourses });
 
       if (validOptions.length === 0) {
         const msg = "ℹ️ No registered courses available for evaluation.";
@@ -1030,16 +1074,33 @@ async function runAutomation() {
         return;
       }
 
-      // Find next unevaluated course
-      const nextCourseOpt = validOptions.find((opt) => !evaluatedCourses.includes(opt.value));
+      // Filter active courses (excluding skipped ones)
+      const activeOptions = validOptions.filter((opt) => !skippedCourses.includes(opt.value));
+      const totalActiveCourses = activeOptions.length;
+
+      if (totalActiveCourses === 0) {
+        const msg = `ℹ️ All ${validOptions.length} courses were skipped based on your course checklist.`;
+        await appendLog(msg);
+        showToastNotification("All courses were skipped based on your checklist settings.", "All Courses Skipped", "info", 7000);
+        await chrome.storage.local.set({ isAutomating: false, currentStatus: msg, courseProgress: null });
+        await chrome.storage.local.remove(["password"]);
+        return;
+      }
+
+      // Find next unevaluated course among active courses
+      const nextCourseOpt = activeOptions.find((opt) => !evaluatedCourses.includes(opt.value));
 
       if (!nextCourseOpt) {
-        const msg = `All ${totalCourses} available courses evaluated! Final check completed.`;
+        const evalCount = evaluatedCourses.length;
+        const skipCount = skippedCourses.filter((id) => validOptions.some((opt) => opt.value === id)).length;
+        const msg = skipCount > 0
+          ? `🎉 Evaluation complete! Evaluated ${evalCount} course(s) (${skipCount} skipped for manual review).`
+          : `🎉 All ${validOptions.length} available courses evaluated! Final check completed.`;
         await appendLog(msg);
         const finalProgress = {
-          current: totalCourses,
-          total: totalCourses,
-          courseName: "All courses evaluated!",
+          current: totalActiveCourses,
+          total: totalActiveCourses,
+          courseName: "All selected courses evaluated!",
           percent: 100
         };
         await chrome.storage.local.set({ isAutomating: false, currentStatus: msg, courseProgress: finalProgress });
@@ -1050,19 +1111,21 @@ async function runAutomation() {
 
       const currentCourseNum = evaluatedCourses.length + 1;
       const courseName = nextCourseOpt.text.trim();
-      const progressPercent = Math.round(((currentCourseNum - 1) / totalCourses) * 100);
+      const progressPercent = Math.round(((currentCourseNum - 1) / totalActiveCourses) * 100);
       const currentProgress = {
         current: currentCourseNum,
-        total: totalCourses,
+        total: totalActiveCourses,
         courseName: courseName,
         percent: progressPercent
       };
       await chrome.storage.local.set({ courseProgress: currentProgress });
 
+      const courseToSkip = { id: nextCourseOpt.value, name: courseName };
+
       // If next course is not currently selected, select it
       if (courseSelect.value !== nextCourseOpt.value) {
-        await appendLog(`Evaluating course (${currentCourseNum}/${totalCourses}): ${courseName}...`);
-        showFloatingBadge(`Selecting: ${courseName}`, false, currentProgress);
+        await appendLog(`Evaluating course (${currentCourseNum}/${totalActiveCourses}): ${courseName}...`);
+        showFloatingBadge(`Selecting: ${courseName}`, false, currentProgress, courseToSkip);
         courseSelect.value = nextCourseOpt.value;
         courseSelect.dispatchEvent(new Event("change", { bubbles: true }));
         return;
@@ -1101,8 +1164,8 @@ async function runAutomation() {
       }
 
       // 2. Answer all questions with 'Strongly Agree' (value 5)
-      await appendLog(`Evaluating course (${currentCourseNum}/${totalCourses}): ${courseName} - Answering ${radios.length} questions...`);
-      showFloatingBadge(`Filling ${radios.length} questions...`, false, currentProgress);
+      await appendLog(`Evaluating course (${currentCourseNum}/${totalActiveCourses}): ${courseName} - Answering ${radios.length} questions...`);
+      showFloatingBadge(`Filling ${radios.length} questions...`, false, currentProgress, courseToSkip);
 
       for (let i = 0; i < radios.length; i++) {
         const radio = radios[i];
@@ -1111,15 +1174,15 @@ async function runAutomation() {
         await sleep(150);
       }
 
-      await appendLog(`All questions answered for (${currentCourseNum}/${totalCourses}): ${courseName}. Preparing to save...`);
+      await appendLog(`All questions answered for (${currentCourseNum}/${totalActiveCourses}): ${courseName}. Preparing to save...`);
       await sleep(800);
 
       // 3. Mark course as evaluated in storage BEFORE submit
       evaluatedCourses.push(nextCourseOpt.value);
-      const postSubmitPercent = Math.round((evaluatedCourses.length / totalCourses) * 100);
+      const postSubmitPercent = Math.round((evaluatedCourses.length / totalActiveCourses) * 100);
       const updatedProgress = {
         current: currentCourseNum,
-        total: totalCourses,
+        total: totalActiveCourses,
         courseName: courseName,
         percent: postSubmitPercent
       };
@@ -1132,7 +1195,7 @@ async function runAutomation() {
         document.querySelector("input[type='submit'][value='Save']");
 
       if (saveBtn) {
-        await appendLog(`Saving evaluation for (${currentCourseNum}/${totalCourses}): '${courseName}'...`);
+        await appendLog(`Saving evaluation for (${currentCourseNum}/${totalActiveCourses}): '${courseName}'...`);
         showFloatingBadge(`Saving: ${courseName}...`, false, updatedProgress);
         saveBtn.scrollIntoView({ behavior: "smooth", block: "center" });
         await sleep(500);
@@ -1175,11 +1238,23 @@ async function safeRunAutomation() {
   }
 }
 
-// React to direct messages from background
+// React to direct messages from background or popup
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.action === "TRIGGER_AUTOMATION") {
     safeRunAutomation();
     sendResponse({ status: "ok" });
+  } else if (msg && msg.action === "GET_COURSES") {
+    const courseSelect = document.getElementById("ctl00_MainContainer_ddlAcaCalSection");
+    if (courseSelect) {
+      const validOptions = Array.from(courseSelect.options).filter(
+        (opt) => opt.value !== "0_0" && opt.value !== "0" && opt.text.trim() !== "Select"
+      );
+      const courses = validOptions.map((opt) => ({ id: opt.value, name: opt.text.trim() }));
+      chrome.storage.local.set({ detectedCourses: courses });
+      sendResponse({ courses });
+      return;
+    }
+    sendResponse({ courses: [] });
   }
 });
 
@@ -1200,6 +1275,18 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 // Automatically trigger on page load
 function initPage() {
+  // Pre-cache courses if student is currently on Evaluation Form
+  const courseSelect = document.getElementById("ctl00_MainContainer_ddlAcaCalSection");
+  if (courseSelect) {
+    const validOptions = Array.from(courseSelect.options).filter(
+      (opt) => opt.value !== "0_0" && opt.value !== "0" && opt.text.trim() !== "Select"
+    );
+    if (validOptions.length > 0) {
+      const detected = validOptions.map((opt) => ({ id: opt.value, name: opt.text.trim() }));
+      chrome.storage.local.set({ detectedCourses: detected });
+    }
+  }
+
   chrome.storage.local.get(["isAutomating"], (data) => {
     if (data.isAutomating) {
       safeRunAutomation();
