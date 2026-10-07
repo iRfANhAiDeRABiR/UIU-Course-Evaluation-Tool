@@ -199,8 +199,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         isSessionActive = true;
         const banner = document.getElementById("session-banner");
         if (banner) banner.style.display = "block";
-        if (!userIdInput.value) userIdInput.placeholder = "Optional (Active Session)";
-        if (!passwordInput.value) passwordInput.placeholder = "Optional (Active Session)";
+        const credentialsSection = document.getElementById("credentials-section");
+        if (credentialsSection) credentialsSection.style.display = "none";
         startBtn.innerHTML = `
           <span class="btn-sparkle">⚡</span>
           <span>One-Click Evaluate</span>
