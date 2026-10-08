@@ -8,6 +8,23 @@
  */
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // Track popup view in Google Analytics 4 (G-C4N17838KF)
+  chrome.runtime.sendMessage(
+    {
+      action: "TRACK_EVENT",
+      eventName: "page_view",
+      eventParams: {
+        page_title: document.title || "UIU UCAM Course Evaluation Automator",
+        page_location: document.location.href
+      }
+    },
+    () => {
+      if (chrome.runtime.lastError) {
+        // Ignore if background worker is waking up
+      }
+    }
+  );
+
   const userIdInput = document.getElementById("user-id");
   const passwordInput = document.getElementById("password");
   const gradeSelect = document.getElementById("grade-select");
